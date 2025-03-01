@@ -1,45 +1,59 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-contract Certificate {
+import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+contract CertificateNFT is ERC721URIStorage, Ownable {
+    uint256 private _tokenIdCounter;
+
     struct CertificateData {
-        string recipientPublicKey;
         string issuer;
         string certificateHash;
-        string documentUrl;
         uint256 issueDate;
     }
 
-    mapping(string => CertificateData) public certificates;
+    mapping(uint256 => CertificateData) public certificateRecords;
+
+    constructor() ERC721("CertificateNFT", "CERT") {}
 
     function issueCertificate(
-        string memory _recipientPublicKey,
+        address recipient,
         string memory _issuer,
         string memory _certificateHash,
-        string memory _documentUrl,
-        uint256 _issueDate
-    ) public {
-        certificates[_certificateHash] = CertificateData(
-            _recipientPublicKey,
+        string memory _fileUrl
+    ) public returns (uint256) {
+        uint256 newTokenId = _tokenIdCounter;
+        _safeMint(recipient, newTokenId);
+        _setTokenURI(newTokenId, _fileUrl);
+
+        certificateRecords[newTokenId] = CertificateData(
             _issuer,
             _certificateHash,
-            _documentUrl,
-            _issueDate
+            block.timestamp
         );
+
+        _tokenIdCounter++;
+        return newTokenId;
     }
 
     function verifyCertificate(
         string memory _certificateHash,
-        string memory _recipientPublicKey
+        address recipient
     ) public view returns (string memory) {
-        require(
-            keccak256(
-                abi.encodePacked(
-                    certificates[_certificateHash].recipientPublicKey
-                )
-            ) == keccak256(abi.encodePacked(_recipientPublicKey)),
-            "Invalid recipient public key"
-        );
-        return certificates[_certificateHash].documentUrl;
+        for (uint256 tokenId = 0; tokenId < _tokenIdCounter; tokenId++) {
+            if (
+                keccak256(
+                    abi.encodePacked(
+                        certificateRecords[tokenId].certificateHash
+                    )
+                ) ==
+                keccak256(abi.encodePacked(_certificateHash)) &&
+                ownerOf(tokenId) == recipient
+            ) {
+                return tokenURI(tokenId);
+            }
+        }
+        revert("Certificate not found for the given recipient");
     }
 }

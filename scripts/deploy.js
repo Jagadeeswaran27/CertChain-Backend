@@ -1,9 +1,13 @@
 const { ethers } = require("hardhat");
 
 async function main() {
-  const Certificate = await ethers.getContractFactory("`Certificate`");
+  const [deployer] = await ethers.getSigners();
+  console.log("Deploying contract with address:", deployer.address);
+
+  const Certificate = await ethers.getContractFactory("CertificateNFT");
   const certificate = await Certificate.deploy();
   await certificate.deployed();
+
   console.log("Certificate contract deployed to:", certificate.address);
 }
 

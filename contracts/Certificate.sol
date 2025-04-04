@@ -10,6 +10,7 @@ contract CertificateNFT is ERC721URIStorage, Ownable {
     struct CertificateData {
         string issuer;
         string certificateHash;
+        string certificateTitle;
         uint256 issueDate;
     }
 
@@ -21,17 +22,20 @@ contract CertificateNFT is ERC721URIStorage, Ownable {
         address recipient,
         string memory _issuer,
         string memory _certificateHash,
+        string memory _certificateTitle,
         string memory _fileUrl
     ) public returns (uint256) {
         uint256 newTokenId = _tokenIdCounter;
-        _safeMint(recipient, newTokenId);
-        _setTokenURI(newTokenId, _fileUrl);
 
         certificateRecords[newTokenId] = CertificateData(
             _issuer,
             _certificateHash,
+            _certificateTitle,
             block.timestamp
         );
+
+        _safeMint(recipient, newTokenId);
+        _setTokenURI(newTokenId, _fileUrl);
 
         _tokenIdCounter++;
         return newTokenId;
@@ -40,7 +44,7 @@ contract CertificateNFT is ERC721URIStorage, Ownable {
     function verifyCertificate(
         string memory _certificateHash,
         address recipient
-    ) public view returns (string memory) {
+    ) public view returns (string memory tokenUri, string memory issuer) {
         for (uint256 tokenId = 0; tokenId < _tokenIdCounter; tokenId++) {
             if (
                 keccak256(
@@ -51,7 +55,7 @@ contract CertificateNFT is ERC721URIStorage, Ownable {
                 keccak256(abi.encodePacked(_certificateHash)) &&
                 ownerOf(tokenId) == recipient
             ) {
-                return tokenURI(tokenId);
+                return (tokenURI(tokenId), certificateRecords[tokenId].issuer);
             }
         }
         revert("Certificate not found for the given recipient");
